@@ -9,15 +9,16 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL is not set. Supabase URL requires 'postgresql+asyncpg://...' format.")
+    raise ValueError("DATABASE_URL is not set.")
 
-# Monolithic အားလျော်စွာ Pool ပြန်လည်အသုံးပြုပါမည် (pool_pre_ping သည် connection ပြတ်တောက်မှုကို ကာကွယ်ပေးသည်)
+# SSL အလိုအလျောက် ချိတ်ဆက်ပေးရန်နှင့် Connection ကို လုံခြုံစေရန် connect_args ကို အသုံးပြုထားသည်
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  
     pool_size=5,
     max_overflow=10,
-    pool_pre_ping=True 
+    pool_pre_ping=True,
+    connect_args={"ssl": True} 
 )
 
 AsyncSessionLocal = async_sessionmaker(
