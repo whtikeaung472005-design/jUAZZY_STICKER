@@ -1,6 +1,7 @@
 # Filename: database/db.py
 import os
 import logging
+import ssl
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from database.models import Base
 
@@ -11,14 +12,24 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set.")
 
-# SSL အလိုအလျောက် ချိတ်ဆက်ပေးရန်နှင့် Connection ကို လုံခြုံစေရန် connect_args ကို အသုံးပြုထားသည်
+# ---------------------------------------------------------
+# SECURITY & INFRASTRUCTURE FIX:
+# Supabase Pooler ၏ Self-signed Certificate ကို ကျော်ဖြတ်ရန်
+# SSL ကို အသုံးပြုသော်လည်း Strict Validation ကို ပိတ်ထားသည့်
+# Custom SSL Context အား တည်ဆောက်ထားခြင်း ဖြစ်ပါသည်။
+# ---------------------------------------------------------
+custom_ssl_context = ssl.create_default_context()
+custom_ssl_context.check_hostname = False
+custom_ssl_context.verify_mode = ssl.CERT_NONE
+
+# engine ထဲသို့ သာမန် "ssl": True အစား custom_ssl_context ကို အစားထိုး ထည့်သွင်းထားသည်
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    connect_args={"ssl": True} 
+    connect_args={"ssl": custom_ssl_context} 
 )
 
 AsyncSessionLocal = async_sessionmaker(
