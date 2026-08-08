@@ -50,9 +50,11 @@ async def main():
     dp.update.middleware(DbSessionMiddleware())
     dp.include_router(router)
     
+    # UI Update: Menu တွင် stats command ထည့်သွင်းထားသည်
     await bot.set_my_commands([
         BotCommand(command="start", description="အစမှ ပြန်ဖွင့်ရန်"),
         BotCommand(command="mypack", description="Sticker Pack ပြန်ယူရန်"),
+        BotCommand(command="stats", description="အသုံးပြုသူ အရေအတွက် ကြည့်ရန်"),
         BotCommand(command="help", description="အသုံးပြုနည်း")
     ])
 
