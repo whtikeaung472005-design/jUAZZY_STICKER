@@ -13,23 +13,29 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set.")
 
 # ---------------------------------------------------------
-# SECURITY & INFRASTRUCTURE FIX:
+# SECURITY & INFRASTRUCTURE FIX 1: SSL Validation Bypass
 # Supabase Pooler ၏ Self-signed Certificate ကို ကျော်ဖြတ်ရန်
-# SSL ကို အသုံးပြုသော်လည်း Strict Validation ကို ပိတ်ထားသည့်
-# Custom SSL Context အား တည်ဆောက်ထားခြင်း ဖြစ်ပါသည်။
 # ---------------------------------------------------------
 custom_ssl_context = ssl.create_default_context()
 custom_ssl_context.check_hostname = False
 custom_ssl_context.verify_mode = ssl.CERT_NONE
 
-# engine ထဲသို့ သာမန် "ssl": True အစား custom_ssl_context ကို အစားထိုး ထည့်သွင်းထားသည်
+# ---------------------------------------------------------
+# SECURITY & INFRASTRUCTURE FIX 2: PgBouncer Compatibility
+# Supabase Transaction Pooler (Port 6543) နှင့် ဝင်တိုက်မှုမဖြစ်စေရန်
+# SQLAlchemy နှင့် asyncpg နှစ်ခုလုံး၏ Statement Caching ကို ပိတ်ထားခြင်း
+# ---------------------------------------------------------
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    connect_args={"ssl": custom_ssl_context} 
+    prepared_statement_cache_size=0,  # Disable SQLAlchemy's cache
+    connect_args={
+        "ssl": custom_ssl_context,
+        "statement_cache_size": 0,    # Disable asyncpg's cache
+    } 
 )
 
 AsyncSessionLocal = async_sessionmaker(
@@ -42,7 +48,7 @@ async def init_db():
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables verified.")
+        logger.info("Database tables verified successfully.")
     except Exception as e:
         logger.error(f"Error initializing DB: {e}")
         raise
