@@ -22,8 +22,8 @@ custom_ssl_context.verify_mode = ssl.CERT_NONE
 
 # ---------------------------------------------------------
 # SECURITY & INFRASTRUCTURE FIX 2: PgBouncer Compatibility
-# Supabase Transaction Pooler (Port 6543) နှင့် ဝင်တိုက်မှုမဖြစ်စေရန်
-# SQLAlchemy နှင့် asyncpg နှစ်ခုလုံး၏ Statement Caching ကို ပိတ်ထားခြင်း
+# Supabase Transaction Pooler နှင့် ဝင်တိုက်မှုမဖြစ်စေရန်
+# asyncpg ၏ Statement Caching ကို connect_args မှတစ်ဆင့် ပိတ်ထားခြင်း
 # ---------------------------------------------------------
 engine = create_async_engine(
     DATABASE_URL,
@@ -31,7 +31,6 @@ engine = create_async_engine(
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    prepared_statement_cache_size=0,  # Disable SQLAlchemy's cache
     connect_args={
         "ssl": custom_ssl_context,
         "statement_cache_size": 0,    # Disable asyncpg's cache
