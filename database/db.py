@@ -13,18 +13,14 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set.")
 
 # ---------------------------------------------------------
-# SECURITY & INFRASTRUCTURE FIX 1: SSL Validation Bypass
+# SECURITY & INFRASTRUCTURE FIX: SSL Validation Bypass
 # Supabase Pooler ၏ Self-signed Certificate ကို ကျော်ဖြတ်ရန်
 # ---------------------------------------------------------
 custom_ssl_context = ssl.create_default_context()
 custom_ssl_context.check_hostname = False
 custom_ssl_context.verify_mode = ssl.CERT_NONE
 
-# ---------------------------------------------------------
-# SECURITY & INFRASTRUCTURE FIX 2: PgBouncer Compatibility
-# Supabase Transaction Pooler နှင့် ဝင်တိုက်မှုမဖြစ်စေရန်
-# asyncpg ၏ Statement Caching ကို connect_args မှတစ်ဆင့် ပိတ်ထားခြင်း
-# ---------------------------------------------------------
+# Clean Architecture: Session Mode (Port 5432) ကို သုံးမည်ဖြစ်၍ Caching များကို ပိတ်ရန် မလိုတော့ပါ
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,  
@@ -32,8 +28,7 @@ engine = create_async_engine(
     max_overflow=10,
     pool_pre_ping=True,
     connect_args={
-        "ssl": custom_ssl_context,
-        "statement_cache_size": 0,    # Disable asyncpg's cache
+        "ssl": custom_ssl_context
     } 
 )
 
