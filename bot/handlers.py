@@ -5,7 +5,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from database.models import User
 from bot.keyboards import get_start_keyboard
@@ -24,22 +24,44 @@ async def send_mypack_info(user_id: int, message_obj: Message, session: AsyncSes
 @router.message(CommandStart())
 async def cmd_start(message: Message, session: AsyncSession):
     user_id = message.from_user.id
+    # User အသစ်ဟုတ်မဟုတ် စစ်ဆေးပြီး Database သို့ ထည့်သွင်းခြင်း
     result = await session.execute(select(User).where(User.id == user_id))
     if not result.scalar_one_or_none():
         session.add(User(id=user_id, name=message.from_user.first_name))
         await session.commit()
 
+    # Memory-Optimized Query: Database မှ စုစုပေါင်း User အရေအတွက်ကို ရေတွက်ခြင်း
+    count_result = await session.execute(select(func.count()).select_from(User))
+    total_users = count_result.scalar() or 0
+
     image_url = os.getenv("WELCOME_IMAGE_URL")
-    caption = "👋 <b>မင်္ဂလာပါ။ Telegram Video/Photo Sticker Bot မှ ကြိုဆိုပါတယ်။</b>\n\n🎬 Video သို့မဟုတ် Photo ကို ပို့ပေးလိုက်ရုံဖြင့် Sticker အဖြစ် အလိုအလျောက် ပြောင်းလဲပေးပါမည်။"
+    caption = (
+        f"👋 <b>မင်္ဂလာပါ။ Telegram Video/Photo Sticker Bot မှ ကြိုဆိုပါတယ်။</b>\n\n"
+        f"🎬 Video သို့မဟုတ် Photo ကို ပို့ပေးလိုက်ရုံဖြင့် Sticker အဖြစ် အလိုအလျောက် ပြောင်းလဲပေးပါမည်။\n\n"
+        f"📈 လက်ရှိတွင် အသုံးပြုသူ <b>{total_users:,}</b> ဦးနှင့်အတူ ပူးပေါင်းလိုက်ပါ။"
+    )
     
     if image_url:
         await message.answer_photo(photo=image_url, caption=caption, reply_markup=get_start_keyboard())
     else:
         await message.answer(text=caption, reply_markup=get_start_keyboard())
 
+@router.message(Command("stats"))
+async def cmd_stats(message: Message, session: AsyncSession):
+    """Public Command for checking user stats"""
+    count_result = await session.execute(select(func.count()).select_from(User))
+    total_users = count_result.scalar() or 0
+    
+    text = (
+        "📊 <b>Bot စာရင်းအင်းများ (Public Analytics)</b>\n\n"
+        f"👥 စုစုပေါင်း အသုံးပြုသူ: <b>{total_users:,}</b> ဦး\n\n"
+        f"<i>(System is running on high-availability cloud architecture)</i>"
+    )
+    await message.answer(text)
+
 @router.message(Command("help"))
 async def cmd_help(message: Message):
-    await message.answer("❓ <b>အသုံးပြုနည်း လမ်းညွှန်</b>\n၁။ 20MB အောက် Video သို့မဟုတ် Photo ပို့ပါ။\n၂။ Bot မှ Sticker အဖြစ် ပြောင်းလဲပေးပါမည်။")
+    await message.answer("❓ <b>အသုံးပြုနည်း လမ်းညွှန်</b>\n၁။ 20MB အောက် Video သို့မဟုတ် Photo ပို့ပါ။\n၂။ Bot မှ Sticker အဖြစ် ပြောင်းလဲပေးပါမည်。")
 
 @router.message(Command("mypack"))
 async def cmd_mypack(message: Message, session: AsyncSession):
